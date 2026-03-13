@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador e Validador de CPF</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; }
+    .cpf-display { font-size: 2.5rem; letter-spacing: 4px; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
+  <div class="max-w-md w-full bg-gray-900 rounded-3xl shadow-2xl p-8">
+    <h1 class="text-4xl font-bold text-center mb-2 text-green-400">Gerador de CPF</h1>
+    <p class="text-center text-gray-400 mb-8">Gera CPFs válidos • Valida qualquer CPF</p>
+
+    <!-- Gerador -->
+    <div class="bg-gray-800 rounded-2xl p-6 mb-8">
+      <button onclick="gerarCPF()" 
+              class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-2xl text-lg transition">
+        🔄 GERAR NOVO CPF VÁLIDO
+      </button>
+      
+      <div id="cpfGerado" class="mt-6 text-center cpf-display font-mono text-4xl tracking-widest text-white">
+        000.000.000-00
+      </div>
+      
+      <div class="flex gap-3 mt-6">
+        <button onclick="copiarCPF()" 
+                class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-2xl font-medium">
+          📋 Copiar CPF
+        </button>
+        <button onclick="gerarCPF()" 
+                class="flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-2xl font-medium">
+          Gerar outro
+        </button>
+      </div>
+    </div>
+
+    <!-- Validador -->
+    <div class="bg-gray-800 rounded-2xl p-6">
+      <h2 class="text-xl font-semibold mb-4">Validar CPF</h2>
+      <div class="flex gap-2">
+        <input id="inputCPF" 
+               type="text" 
+               maxlength="14" 
+               placeholder="000.000.000-00" 
+               onkeyup="formatarInput(this)"
+               class="flex-1 bg-gray-700 text-white px-5 py-4 rounded-2xl text-center text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button onclick="validarCPF()" 
+                class="bg-blue-500 hover:bg-blue-600 px-8 rounded-2xl font-bold">
+          Validar
+        </button>
+      </div>
+      <div id="resultadoValidacao" class="mt-4 text-center font-bold text-lg h-8"></div>
+    </div>
+
+    <p class="text-center text-xs text-gray-500 mt-8">
+      Baseado no algoritmo oficial da Receita Federal • 100% funcional
+    </p>
+  </div>
+
+  <script>
+    // Formata o input enquanto digita
+    function formatarInput(input) {
+      let valor = input.value.replace(/\D/g, '');
+      if (valor.length > 11) valor = valor.slice(0, 11);
+      
+      let formatado = '';
+      if (valor.length > 0) formatado += valor.slice(0,3) + '.';
+      if (valor.length > 3) formatado += valor.slice(3,6) + '.';
+      if (valor.length > 6) formatado += valor.slice(6,9) + '-';
+      if (valor.length > 9) formatado += valor.slice(9,11);
+      
+      input.value = formatado;
+    }
+
+    // Remove máscara para cálculos
+    function limparCPF(cpf) {
+      return cpf.replace(/\D/g, '');
+    }
+
+    // Gera CPF válido
+    function gerarCPF() {
+      let digits = [];
+      for (let i = 0; i < 9; i++) {
+        digits.push(Math.floor(Math.random() * 10));
+      }
+
+      // DV1
+      let soma1 = 0;
+      for (let i = 0; i < 9; i++) soma1 += digits[i] * (10 - i);
+      let resto1 = soma1 % 11;
+      let dv1 = resto1 < 2 ? 0 : 11 - resto1;
+
+      // DV2
+      let soma2 = 0;
+      for (let i = 0; i < 9; i++) soma2 += digits[i] * (11 - i);
+      soma2 += dv1 * 2;
+      let resto2 = soma2 % 11;
+      let dv2 = resto2 < 2 ? 0 : 11 - resto2;
+
+      let cpfArray = [...digits, dv1, dv2];
+      
+      // Evita todos dígitos iguais (raro, mas possível)
+      if (new Set(cpfArray).size === 1) return gerarCPF();
+
+      let cpf = cpfArray.join('');
+      let formatado = cpf.slice(0,3) + '.' + cpf.slice(3,6) + '.' + cpf.slice(6,9) + '-' + cpf.slice(9);
+      
+      document.getElementById('cpfGerado').textContent = formatado;
+      return cpf; // retorna sem máscara para uso interno
+    }
+
+    // Copia para clipboard
+    function copiarCPF() {
+      const cpf = document.getElementById('cpfGerado').textContent;
+      if (cpf === '000.000.000-00') {
+        alert('Gere um CPF primeiro!');
+        return;
+      }
+      navigator.clipboard.writeText(cpf).then(() => {
+        const original = document.getElementById('cpfGerado').textContent;
+        document.getElementById('cpfGerado').textContent = '✅ COPIADO!';
+        setTimeout(() => document.getElementById('cpfGerado').textContent = original, 1500);
+      });
+    }
+
+    // Valida CPF
+    function validarCPF() {
+      const input = document.getElementById('inputCPF').value;
+      const cpf = limparCPF(input);
+      
+      const resultado = document.getElementById('resultadoValidacao');
+      
+      if (cpf.length !== 11 || !/^\d+$/.test(cpf)) {
+        resultado.innerHTML = '❌ Digite um CPF com 11 números';
+        resultado.className = 'text-red-500';
+        return;
+      }
+      
+      if (new Set(cpf).size === 1) {
+        resultado.innerHTML = '❌ Todos os dígitos são iguais';
+        resultado.className = 'text-red-500';
+        return;
+      }
+      
+      const digits = cpf.split('').map(Number);
+      
+      // DV1
+      let soma1 = digits.slice(0,9).reduce((acc, d, i) => acc + d * (10 - i), 0);
+      let resto1 = soma1 % 11;
+      let dv1 = resto1 < 2 ? 0 : 11 - resto1;
+      
+      // DV2
+      let soma2 = digits.slice(0,10).reduce((acc, d, i) => acc + d * (11 - i), 0);
+      let resto2 = soma2 % 11;
+      let dv2 = resto2 < 2 ? 0 : 11 - resto2;
+      
+      if (dv1 === digits[9] && dv2 === digits[10]) {
+        resultado.innerHTML = '✅ CPF VÁLIDO!';
+        resultado.className = 'text-green-400';
+      } else {
+        resultado.innerHTML = '❌ CPF INVÁLIDO';
+        resultado.className = 'text-red-500';
+      }
+    }
+
+    // Gera um CPF ao carregar a página
+    window.onload = () => {
+      gerarCPF();
+    };
+  </script>
+</body>
+</html>
